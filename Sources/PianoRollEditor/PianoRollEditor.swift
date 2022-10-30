@@ -16,6 +16,8 @@ public struct PianoRollEditorReducer: ReducerProtocol {
     public struct State: Equatable {
         public var proxy: SolidScrollViewProxy?
         public var content: Content.State
+        public var isTimerActive = false
+        public var milliSecondsLapsed = 0
 
         public init(
             proxy: SolidScrollViewProxy? = nil,
@@ -29,9 +31,16 @@ public struct PianoRollEditorReducer: ReducerProtocol {
     public enum Action: Equatable {
         case proxyChanged(SolidScrollViewProxy?)
         case content(Content.Action)
+        case play
+        case stop
+        case onDisappear
+        case timerTicked
     }
 
     public init() {}
+
+    @Dependency(\.continuousClock) var clock
+    private enum TimerID {}
 
     public var body: some ReducerProtocol<State, Action> {
         Scope(state: \.content, action: /Action.content) {
@@ -47,6 +56,39 @@ public struct PianoRollEditorReducer: ReducerProtocol {
 
             case .content:
                 return .none
+
+            case .play:
+                state.isTimerActive = true
+                return .run { [isTimerActive = state.isTimerActive] send in
+                    guard isTimerActive else { return }
+                    for await _ in self.clock.timer(interval: .milliseconds(100)) {
+                      await send(.timerTicked)
+                    }
+                }
+                .cancellable(id: TimerID.self, cancelInFlight: true)
+
+            case .stop:
+                state.milliSecondsLapsed = 0
+                return .cancel(id: TimerID.self)
+
+            case .timerTicked:
+                state.milliSecondsLapsed += 100
+                guard let proxy = state.proxy else {
+                    return .none
+                }
+
+                proxy.setContentOffset(
+                    .init(
+                        x: proxy.contentOffset.x + state.content.gridSize.width / 5,
+                        y: proxy.contentOffset.y
+                    ),
+                    animated: true
+                )
+
+                return .none
+
+            case .onDisappear:
+              return .cancel(id: TimerID.self)
             }
         }
     }

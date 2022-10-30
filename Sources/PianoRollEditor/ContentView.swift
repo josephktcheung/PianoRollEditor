@@ -26,6 +26,10 @@ public struct Content: ReducerProtocol {
             whiteKeyWidth * spacerRatio
         }
 
+        public var gridSize: CGSize {
+            .init(width: spacerHeight * 2, height: spacerHeight)
+        }
+
         public init(
             disabled: Bool = false,
             offset: CGFloat = .zero,
@@ -126,10 +130,7 @@ struct PitchDiagramContentView: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             keyboard
-            ZStack(alignment: .leading) {
-                pianoRoll
-                line
-            }
+            pianoRoll
         }
     }
 
@@ -158,16 +159,6 @@ struct PitchDiagramContentView: View {
                 gridColor: .white.opacity(0.3),
                 readOnly: viewStore.readOnly
             )
-        }
-    }
-
-    @ViewBuilder private var line: some View {
-        WithViewStore(store, observe: ViewState.Line.init) { viewStore in
-            Rectangle()
-                .fill(.red)
-                .frame(width: 1, height: viewStore.height)
-                .offset(x: viewStore.offset)
-
         }
     }
 }

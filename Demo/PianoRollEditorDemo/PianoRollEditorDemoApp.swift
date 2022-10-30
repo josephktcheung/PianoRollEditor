@@ -11,7 +11,7 @@ import SwiftUI
 struct PianoRollEditorDemoApp: App {
     var body: some Scene {
         WindowGroup {
-            DemoView()
+            DemoView(store: .init(initialState: .init(), reducer: Demo()))
         }
     }
 }
