@@ -16,6 +16,7 @@ fileprivate let spacerRatio: CGFloat = 7 / 12
 
 public struct Content: ReducerProtocol {
     public struct State: Equatable {
+        public var disabled: Bool
         public var offset: CGFloat
         public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
@@ -26,11 +27,13 @@ public struct Content: ReducerProtocol {
         }
 
         public init(
+            disabled: Bool = false,
             offset: CGFloat = .zero,
             pianoRoll: PianoRollModel = .init(notes: [], length: 10, height: 10),
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
             whiteKeyWidth: CGFloat = 60
         ) {
+            self.disabled = disabled
             self.offset = offset
             self.whiteKeyWidth = whiteKeyWidth
             self.pianoRoll = pianoRoll
@@ -52,6 +55,7 @@ public struct Content: ReducerProtocol {
 struct PitchDiagramContentView: View {
     struct ViewState: Equatable {
         struct Keyboard: Equatable {
+            var disabled: Bool
             var offset: CGFloat
             var whiteKeyWidth: CGFloat
             var pitchRange: ClosedRange<Pitch>
@@ -82,6 +86,7 @@ struct PitchDiagramContentView: View {
             }
 
             init(state: Content.State) {
+                self.disabled = state.disabled
                 self.whiteKeyWidth = state.whiteKeyWidth
                 self.pitchRange = state.pitchRange
                 self.offset = state.offset
@@ -90,10 +95,12 @@ struct PitchDiagramContentView: View {
         }
 
         struct PianoRoll: Equatable {
+            var readOnly: Bool
             var model: PianoRollModel
             var gridSize: CGSize
 
             init(state: Content.State) {
+                self.readOnly = state.disabled
                 self.model = state.pianoRoll
                 self.gridSize = .init(width: state.spacerHeight * 2, height: state.spacerHeight)
             }
@@ -129,6 +136,7 @@ struct PitchDiagramContentView: View {
     @ViewBuilder private var keyboard: some View {
         WithViewStore(store, observe: ViewState.Keyboard.init) { viewStore in
             KeyboardView(
+                disabled: viewStore.disabled,
                 pitchRange: viewStore.pitchRange,
                 whiteKeyWidth: viewStore.whiteKeyWidth,
                 keyboardHeight: viewStore.keyboardHeight,
@@ -148,7 +156,7 @@ struct PitchDiagramContentView: View {
                 model: viewStore.binding(get: \.model, send: Content.Action.pianoRollChanged),
                 gridSize: viewStore.gridSize,
                 gridColor: .white.opacity(0.3),
-                readOnly: true
+                readOnly: viewStore.readOnly
             )
         }
     }
@@ -172,6 +180,7 @@ struct KeyboardView: View, Equatable {
         lhs.pianoRollHeight == rhs.pianoRollHeight
     }
 
+    var disabled: Bool = false
     var pitchRange: ClosedRange<Pitch>
     var whiteKeyWidth: CGFloat
     var keyboardHeight: CGFloat
@@ -185,10 +194,16 @@ struct KeyboardView: View, Equatable {
                 layout: .verticalPiano(pitchRange: pitchRange),
                 noteOn: noteOn,
                 noteOff: noteOff
-            )
+            ) { pitch, isActivated in
+                KeyboardKey(
+                    pitch: pitch,
+                    isActivated: isActivated,
+                    alignment: .bottomTrailing
+                )
+            }
                 .frame(width: 100, height: keyboardHeight)
                 .offset(y: (pianoRollHeight - keyboardHeight) / 2)
-                .disabled(true)
+                .disabled(disabled)
         }
         .frame(height: pianoRollHeight)
         .clipped()
