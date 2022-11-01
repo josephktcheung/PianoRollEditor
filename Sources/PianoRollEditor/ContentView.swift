@@ -18,7 +18,13 @@ public struct Content: ReducerProtocol {
     public struct State: Equatable {
         public var disabled: Bool
         public var offset: CGFloat
-        public var pianoRoll: PianoRollModel
+        public var pianoRollNotes: [PianoRollNote]
+        public var pianoRollLength: Int
+        public var pianoRollHeight: Int
+
+        public var pianoRoll: PianoRollModel {
+            .init(notes: pianoRollNotes, length: pianoRollLength, height: pianoRollHeight)
+        }
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
 
@@ -33,14 +39,18 @@ public struct Content: ReducerProtocol {
         public init(
             disabled: Bool = false,
             offset: CGFloat = .zero,
-            pianoRoll: PianoRollModel = .init(notes: [], length: 10, height: 10),
+            pianoRollNotes: [PianoRollNote] = [],
+            pianoRollLength: Int = 0,
+            pianoRollHeight: Int = 0,
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
             whiteKeyWidth: CGFloat = 60
         ) {
             self.disabled = disabled
             self.offset = offset
             self.whiteKeyWidth = whiteKeyWidth
-            self.pianoRoll = pianoRoll
+            self.pianoRollNotes = pianoRollNotes
+            self.pianoRollHeight = pianoRollHeight
+            self.pianoRollLength = pianoRollLength
             self.pitchRange = pitchRange
         }
     }
@@ -99,12 +109,12 @@ struct PitchDiagramContentView: View {
         }
 
         struct PianoRoll: Equatable {
-            var readOnly: Bool
+            var editable: Bool
             var model: PianoRollModel
             var gridSize: CGSize
 
             init(state: Content.State) {
-                self.readOnly = state.disabled
+                self.editable = state.disabled
                 self.model = state.pianoRoll
                 self.gridSize = .init(width: state.spacerHeight * 2, height: state.spacerHeight)
             }
@@ -115,7 +125,7 @@ struct PitchDiagramContentView: View {
             var offset: CGFloat
 
             init(state: Content.State) {
-                self.height = CGFloat(state.pianoRoll.height) * state.spacerHeight
+                self.height = CGFloat(state.pianoRollHeight) * state.spacerHeight
                 self.offset = state.offset + state.spacerHeight * 2 * 5
             }
         }
@@ -154,10 +164,10 @@ struct PitchDiagramContentView: View {
     @ViewBuilder private var pianoRoll: some View {
         WithViewStore(store, observe: ViewState.PianoRoll.init) { viewStore in
             PianoRoll(
+                editable: viewStore.editable,
                 model: viewStore.binding(get: \.model, send: Content.Action.pianoRollChanged),
-                gridSize: viewStore.gridSize,
                 gridColor: .white.opacity(0.3),
-                readOnly: viewStore.readOnly
+                gridSize: viewStore.gridSize
             )
         }
     }

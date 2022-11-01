@@ -12,19 +12,19 @@
     {
       "identity" : "keyboard",
       "kind" : "remoteSourceControl",
-      "location" : "git@github.com:josephktcheung/Keyboard",
+      "location" : "https://github.com/AudioKit/Keyboard",
       "state" : {
-        "branch" : "even-spaced-piano",
-        "revision" : "5ba8029147cc1e711aedd42ea39c7287583c1816"
+        "branch" : "main",
+        "revision" : "238ac6cf0f6efddfcd0ab8b41782377e2617d0a7"
       }
     },
     {
       "identity" : "pianoroll",
       "kind" : "remoteSourceControl",
-      "location" : "git@github.com:josephktcheung/PianoRoll",
+      "location" : "https://github.com/AudioKit/PianoRoll",
       "state" : {
-        "branch" : "develop",
-        "revision" : "80b9c1768689708a940398a34d558c0db575952c"
+        "revision" : "b7b62d5d166e7f662f36c858b7f79767c6652983",
+        "version" : "1.0.4"
       }
     },
     {
