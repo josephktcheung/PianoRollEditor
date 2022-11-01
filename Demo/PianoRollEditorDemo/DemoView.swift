@@ -10,7 +10,7 @@ import PianoRollEditor
 import SwiftUI
 import Tonic
 
-let pitchRange = Pitch(24)...Pitch(77)
+let pitchRange = Pitch(36)...Pitch(77)
 
 struct Demo: ReducerProtocol {
     struct State: Equatable {
@@ -49,11 +49,12 @@ struct DemoView: View {
 
     var body: some View {
         VStack {
-            WithViewStore(store.stateless) { viewStore in
+            WithViewStore(store, observe: { $0.editor.milliSecondsLapsed }) { viewStore in
                 HStack {
                     Button("Play") {
                         viewStore.send(.editor(.play))
                     }
+                    Text("Seconds: \(viewStore.state / 1000)")
                     Button("Stop") {
                         viewStore.send(.editor(.stop))
                     }

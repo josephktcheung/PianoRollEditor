@@ -47,6 +47,7 @@ public struct Content: ReducerProtocol {
         }
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
+        public var activatedPitches: [Pitch: Color]
 
         public var spacerHeight: CGFloat {
             whiteKeyWidth * evenSpacingRelativeBlackKeyWidth
@@ -57,6 +58,7 @@ public struct Content: ReducerProtocol {
         }
 
         public init(
+            activatedPitches: [Pitch: Color] = [:],
             disabled: Bool = false,
             offset: CGFloat = .zero,
             pianoRollNotes: [PianoRollNote] = [],
@@ -65,6 +67,7 @@ public struct Content: ReducerProtocol {
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
             whiteKeyWidth: CGFloat = 60
         ) {
+            self.activatedPitches = activatedPitches
             self.disabled = disabled
             self.offset = offset
             self.whiteKeyWidth = whiteKeyWidth
@@ -94,6 +97,7 @@ struct PitchDiagramContentView: View {
             var whiteKeyWidth: CGFloat
             var pitchRange: ClosedRange<Pitch>
             var pianoRollHeight: CGFloat
+            var activatedPitches: [Pitch: Color]
 
             var keyboardHeight: CGFloat {
                 whiteKeyWidth * CGFloat(whiteKeys.count)
@@ -125,6 +129,7 @@ struct PitchDiagramContentView: View {
                 self.pitchRange = state.pitchRange
                 self.offset = max(state.offset, 0)
                 self.pianoRollHeight = CGFloat(pitchRange.count) * state.spacerHeight
+                self.activatedPitches = state.activatedPitches
             }
         }
 
@@ -172,6 +177,8 @@ struct PitchDiagramContentView: View {
                 whiteKeyWidth: viewStore.whiteKeyWidth,
                 keyboardHeight: viewStore.keyboardHeight,
                 pianoRollHeight: viewStore.pianoRollHeight,
+                pressedColor: { pitch in viewStore.activatedPitches[pitch] ?? .red },
+                isActivatedExternally: { pitch in viewStore.activatedPitches.keys.contains(pitch) },
                 noteOn: { viewStore.send(.noteOn($0, $1)) },
                 noteOff: { viewStore.send(.noteOff($0)) }
             )
@@ -206,6 +213,8 @@ struct KeyboardView: View, Equatable {
     var whiteKeyWidth: CGFloat
     var keyboardHeight: CGFloat
     var pianoRollHeight: CGFloat
+    var pressedColor: (Pitch) -> Color
+    var isActivatedExternally: (Pitch) -> Bool
     var noteOn: (Pitch, CGPoint) -> Void
     var noteOff: (Pitch) -> Void
 
@@ -224,7 +233,9 @@ struct KeyboardView: View, Equatable {
                 KeyboardKey(
                     pitch: pitch,
                     isActivated: isActivated,
-                    alignment: .bottomTrailing
+                    pressedColor: pressedColor(pitch),
+                    alignment: .bottomTrailing,
+                    isActivatedExternally: isActivatedExternally(pitch)
                 )
             }
                 .frame(width: 100, height: keyboardHeight)

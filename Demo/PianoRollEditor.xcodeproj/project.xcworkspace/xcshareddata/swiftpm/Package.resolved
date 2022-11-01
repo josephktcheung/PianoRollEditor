@@ -21,10 +21,10 @@
     {
       "identity" : "pianoroll",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/AudioKit/PianoRoll",
+      "location" : "https://github.com/josephktcheung/PianoRoll",
       "state" : {
-        "revision" : "b7b62d5d166e7f662f36c858b7f79767c6652983",
-        "version" : "1.0.4"
+        "branch" : "public-PianoRollNote-properties",
+        "revision" : "b28111231a6e6478d7314b0531d2c302778a3cae"
       }
     },
     {

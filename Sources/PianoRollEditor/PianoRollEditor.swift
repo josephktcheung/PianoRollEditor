@@ -61,7 +61,7 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                 state.isTimerActive = true
                 return .run { [isTimerActive = state.isTimerActive] send in
                     guard isTimerActive else { return }
-                    for await _ in self.clock.timer(interval: .milliseconds(100)) {
+                    for await _ in self.clock.timer(interval: .milliseconds(50)) {
                       await send(.timerTicked)
                     }
                 }
@@ -72,17 +72,30 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                 return .cancel(id: TimerID.self)
 
             case .timerTicked:
-                state.milliSecondsLapsed += 100
+                state.milliSecondsLapsed += 50
+
+                // Find activated pitches
+                state.content.activatedPitches = state.content.pianoRollNotes
+                    .filter {
+                        let startTime = $0.start * 500
+                        let endTime = ($0.start + $0.length) * 500
+                        return (startTime...endTime).contains(Double(state.milliSecondsLapsed))
+                    }
+                    .reduce(into: [Pitch: Color]()) { dict, element in
+                        let pitch = Array(state.content.pitchRange)[element.pitch - 1]
+                        dict[pitch] = element.color
+                    }
+
                 guard let proxy = state.proxy else {
                     return .none
                 }
 
                 proxy.setContentOffset(
                     .init(
-                        x: proxy.contentOffset.x + state.content.gridSize.width / 5,
+                        x: proxy.contentOffset.x + state.content.gridSize.width / 10,
                         y: proxy.contentOffset.y
                     ),
-                    animated: true
+                    animated: false
                 )
 
                 return .none
