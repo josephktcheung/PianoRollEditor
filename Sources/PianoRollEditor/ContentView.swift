@@ -12,7 +12,27 @@ import Tonic
 import SolidScroll
 import SwiftUI
 
-fileprivate let spacerRatio: CGFloat = 7 / 12
+fileprivate let evenSpacingInitialSpacerRatio: [Letter: CGFloat] = [
+    .C: 0.0,
+    .D: 2.0 / 12.0,
+    .E: 4.0 / 12.0,
+    .F: 0.0 / 12.0,
+    .G: 1.0 / 12.0,
+    .A: 3.0 / 12.0,
+    .B: 5.0 / 12.0
+]
+
+fileprivate let evenSpacingSpacerRatio: [Letter: CGFloat] = [
+    .C: 7.0 / 12.0,
+    .D: 7.0 / 12.0,
+    .E: 7.0 / 12.0,
+    .F: 7.0 / 12.0,
+    .G: 7.0 / 12.0,
+    .A: 7.0 / 12.0,
+    .B: 7.0 / 12.0
+]
+
+fileprivate let evenSpacingRelativeBlackKeyWidth: CGFloat = 7.0 / 12.0
 
 public struct Content: ReducerProtocol {
     public struct State: Equatable {
@@ -29,7 +49,7 @@ public struct Content: ReducerProtocol {
         public var whiteKeyWidth: CGFloat
 
         public var spacerHeight: CGFloat {
-            whiteKeyWidth * spacerRatio
+            whiteKeyWidth * evenSpacingRelativeBlackKeyWidth
         }
 
         public var gridSize: CGSize {
@@ -192,7 +212,12 @@ struct KeyboardView: View, Equatable {
     var body: some View {
         ZStack(alignment: .bottom) {
             Keyboard(
-                layout: .verticalPiano(pitchRange: pitchRange),
+                layout: .verticalPiano(
+                    pitchRange: pitchRange,
+                    initialSpacerRatio: evenSpacingInitialSpacerRatio,
+                    spacerRatio: evenSpacingSpacerRatio,
+                    relativeBlackKeyWidth: evenSpacingRelativeBlackKeyWidth
+                ),
                 noteOn: noteOn,
                 noteOff: noteOff
             ) { pitch, isActivated in
