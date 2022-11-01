@@ -123,7 +123,7 @@ struct PitchDiagramContentView: View {
                 self.disabled = state.disabled
                 self.whiteKeyWidth = state.whiteKeyWidth
                 self.pitchRange = state.pitchRange
-                self.offset = state.offset
+                self.offset = max(state.offset, 0)
                 self.pianoRollHeight = CGFloat(pitchRange.count) * state.spacerHeight
             }
         }
