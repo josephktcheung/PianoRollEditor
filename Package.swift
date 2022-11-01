@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/AudioKit/Keyboard", branch: "main"),
-        .package(url: "https://github.com/josephktcheung/PianoRoll", branch: "public-PianoRollNote-properties"),
+        .package(url: "https://github.com/AudioKit/PianoRoll", from: "1.0.5"),
         .package(url: "https://github.com/edudnyk/SolidScroll", from: "0.0.1"),
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "0.44.0"),
         .package(url: "https://github.com/AudioKit/Tonic", from: "1.0.6"),
