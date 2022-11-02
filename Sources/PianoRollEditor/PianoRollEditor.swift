@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import Keyboard
+import PianoConductor
 import PianoRoll
 import SolidScroll
 import SwiftUI
@@ -40,6 +41,8 @@ public struct PianoRollEditorReducer: ReducerProtocol {
     public init() {}
 
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.pianoConductor) var conductor
+    
     private enum TimerID {}
 
     public var body: some ReducerProtocol<State, Action> {
@@ -54,12 +57,23 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                 state.content.offset = state.proxy?.contentOffset.x ?? .zero
                 return .none
 
+            case let .content(.noteOn(pitch, _)):
+                return .fireAndForget {
+                    await conductor.noteOn(pitch)
+                }
+
+            case let .content(.noteOff(pitch)):
+                return .fireAndForget {
+                    await conductor.noteOff(pitch)
+                }
+
             case .content:
                 return .none
 
             case .play:
                 state.isTimerActive = true
                 return .run { [isTimerActive = state.isTimerActive] send in
+                    await conductor.start()
                     guard isTimerActive else { return }
                     for await _ in self.clock.timer(interval: .milliseconds(50)) {
                       await send(.timerTicked)
@@ -75,6 +89,7 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                 state.milliSecondsLapsed += 50
 
                 // Find activated pitches
+                let lastActivatedPitches = state.content.activatedPitches
                 state.content.activatedPitches = state.content.pianoRollNotes
                     .filter {
                         let startTime = $0.start * 500
@@ -98,7 +113,19 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                     animated: false
                 )
 
-                return .none
+                return .fireAndForget { [
+                    activatedPitches = state.content.activatedPitches,
+                    lastActivatedPitches
+                ] in
+                    let addedPitches = Set(activatedPitches.keys).subtracting(Set(lastActivatedPitches.keys))
+                    for pitch in addedPitches {
+                        await conductor.noteOn(pitch)
+                    }
+                    let removedPitches = Set(lastActivatedPitches.keys).subtracting(Set(activatedPitches.keys))
+                    for pitch in removedPitches {
+                        await conductor.noteOff(pitch)
+                    }
+                }
 
             case .onDisappear:
               return .cancel(id: TimerID.self)

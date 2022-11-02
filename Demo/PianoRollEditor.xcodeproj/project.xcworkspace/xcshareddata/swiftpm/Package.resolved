@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "audiokit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/AudioKit/AudioKit",
+      "state" : {
+        "revision" : "697907438169bfac4f625d35a529b4635b5e5f69",
+        "version" : "5.5.7"
+      }
+    },
+    {
       "identity" : "combine-schedulers",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/combine-schedulers",
@@ -68,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-composable-architecture",
       "state" : {
-        "revision" : "ed3a380f09a81e72636d7b0699bf2dd2e6313780",
-        "version" : "0.44.1"
+        "revision" : "1fcd53fc875bade47d850749ea53c324f74fd64d",
+        "version" : "0.45.0"
       }
     },
     {
