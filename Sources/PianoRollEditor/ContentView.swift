@@ -42,9 +42,7 @@ public struct Content: ReducerProtocol {
         public var pianoRollLength: Int
         public var pianoRollHeight: Int
 
-        public var pianoRoll: PianoRollModel {
-            .init(notes: pianoRollNotes, length: pianoRollLength, height: pianoRollHeight)
-        }
+        public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
         public var activatedPitches: [Pitch: Color]
@@ -56,6 +54,8 @@ public struct Content: ReducerProtocol {
         public var gridSize: CGSize {
             .init(width: spacerHeight * 2, height: spacerHeight)
         }
+
+        public var proxy: SolidScrollViewProxy? = nil
 
         public init(
             activatedPitches: [Pitch: Color] = [:],
@@ -75,6 +75,7 @@ public struct Content: ReducerProtocol {
             self.pianoRollHeight = pianoRollHeight
             self.pianoRollLength = pianoRollLength
             self.pitchRange = pitchRange
+            self.pianoRoll = .init(notes: pianoRollNotes, length: pianoRollLength, height: pianoRollHeight)
         }
     }
 
@@ -82,10 +83,23 @@ public struct Content: ReducerProtocol {
         case noteOn(Pitch, CGPoint)
         case noteOff(Pitch)
         case pianoRollChanged(PianoRollModel)
+        case proxyChanged(SolidScrollViewProxy?)
+        case offsetChanged(CGFloat)
     }
 
     public func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
-        return .none
+        switch action {
+        case let .proxyChanged(proxy):
+            state.proxy = proxy
+            return .none
+
+        case let .offsetChanged(offset):
+            state.offset = offset
+            return .none
+
+        case .noteOn, .noteOff, .pianoRollChanged:
+            return .none
+        }
     }
 }
 
@@ -164,21 +178,26 @@ struct PitchDiagramContentView: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            keyboard
+            ScrollView([.vertical]) {
+                WithViewStore(store, observe: { $0.offset }) { viewStore in
+                    keyboard.offset(y: viewStore.state)
+                }
+            }
+            .scrollDisabled(true)
             pianoRoll
+                .coordinateSpace(name: "scroll")
         }
     }
 
     @ViewBuilder private var keyboard: some View {
         WithViewStore(store, observe: ViewState.Keyboard.init) { viewStore in
             KeyboardView(
+                activatedPitches: viewStore.activatedPitches,
                 disabled: viewStore.disabled,
                 pitchRange: viewStore.pitchRange,
                 whiteKeyWidth: viewStore.whiteKeyWidth,
                 keyboardHeight: viewStore.keyboardHeight,
                 pianoRollHeight: viewStore.pianoRollHeight,
-                pressedColor: { pitch in viewStore.activatedPitches[pitch] ?? .red },
-                isActivatedExternally: { pitch in viewStore.activatedPitches.keys.contains(pitch) },
                 noteOn: { viewStore.send(.noteOn($0, $1)) },
                 noteOff: { viewStore.send(.noteOff($0)) }
             )
@@ -189,13 +208,27 @@ struct PitchDiagramContentView: View {
     }
 
     @ViewBuilder private var pianoRoll: some View {
-        WithViewStore(store, observe: ViewState.PianoRoll.init) { viewStore in
-            PianoRoll(
-                editable: viewStore.editable,
-                model: viewStore.binding(get: \.model, send: Content.Action.pianoRollChanged),
-                gridColor: .white.opacity(0.3),
-                gridSize: viewStore.gridSize
-            )
+        WithViewStore(store.stateless) { viewStore in
+            SolidScrollView([.horizontal, .vertical]) {
+                WithViewStore(store, observe: ViewState.PianoRoll.init) { viewStore in
+                    PianoRoll(
+                        editable: viewStore.editable,
+                        model: viewStore.binding(get: \.model, send: Content.Action.pianoRollChanged),
+                        gridColor: .white.opacity(0.3),
+                        gridSize: viewStore.gridSize
+                    )
+                    .background(GeometryReader { geo in
+                        Color.clear
+                            .preference(key: ViewOffsetKey.self, value: geo.frame(in: .named("scroll")).origin)
+                    })
+                    .onPreferenceChange(ViewOffsetKey.self) {
+                        viewStore.send(.offsetChanged($0.y))
+                    }
+                }
+            }
+            .onPreferenceChange(ContainedScrollViewKey.self) {
+                viewStore.send(.proxyChanged($0))
+            }
         }
     }
 }
@@ -205,16 +238,16 @@ struct KeyboardView: View, Equatable {
         lhs.pitchRange == rhs.pitchRange &&
         lhs.whiteKeyWidth == rhs.whiteKeyWidth &&
         lhs.keyboardHeight == rhs.keyboardHeight &&
-        lhs.pianoRollHeight == rhs.pianoRollHeight
+        lhs.pianoRollHeight == rhs.pianoRollHeight &&
+        lhs.activatedPitches == rhs.activatedPitches
     }
 
+    var activatedPitches: [Pitch: Color] = [:]
     var disabled: Bool = false
     var pitchRange: ClosedRange<Pitch>
     var whiteKeyWidth: CGFloat
     var keyboardHeight: CGFloat
     var pianoRollHeight: CGFloat
-    var pressedColor: (Pitch) -> Color
-    var isActivatedExternally: (Pitch) -> Bool
     var noteOn: (Pitch, CGPoint) -> Void
     var noteOff: (Pitch) -> Void
 
@@ -233,9 +266,9 @@ struct KeyboardView: View, Equatable {
                 KeyboardKey(
                     pitch: pitch,
                     isActivated: isActivated,
-                    pressedColor: pressedColor(pitch),
+                    pressedColor: activatedPitches[pitch] ?? .red,
                     alignment: .bottomTrailing,
-                    isActivatedExternally: isActivatedExternally(pitch)
+                    isActivatedExternally: activatedPitches.keys.contains(pitch)
                 )
             }
                 .frame(width: 100, height: keyboardHeight)
@@ -247,3 +280,19 @@ struct KeyboardView: View, Equatable {
     }
 }
 
+struct ViewOffsetKey: PreferenceKey {
+    typealias Value = CGPoint
+    static var defaultValue = CGPoint.zero
+    static func reduce(value: inout Value, nextValue: () -> Value) {
+        value.x += nextValue().x
+        value.y += nextValue().y
+    }
+}
+
+#if DEBUG
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        PitchDiagramContentView(store: .init(initialState: .init(), reducer: Content()))
+    }
+}
+#endif

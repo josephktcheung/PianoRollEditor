@@ -15,22 +15,18 @@ import Tonic
 
 public struct PianoRollEditorReducer: ReducerProtocol {
     public struct State: Equatable {
-        public var proxy: SolidScrollViewProxy?
         public var content: Content.State
         public var isTimerActive = false
         public var milliSecondsLapsed = 0
 
         public init(
-            proxy: SolidScrollViewProxy? = nil,
             content: Content.State = .init()
         ) {
-            self.proxy = proxy
             self.content = content
         }
     }
 
     public enum Action: Equatable {
-        case proxyChanged(SolidScrollViewProxy?)
         case content(Content.Action)
         case play
         case stop
@@ -52,11 +48,6 @@ public struct PianoRollEditorReducer: ReducerProtocol {
 
         Reduce { state, action in
             switch action {
-            case let .proxyChanged(proxy):
-                state.proxy = proxy
-                state.content.offset = state.proxy?.contentOffset.x ?? .zero
-                return .none
-
             case let .content(.noteOn(pitch, _)):
                 return .fireAndForget {
                     await conductor.noteOn(pitch)
@@ -101,7 +92,7 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                         dict[pitch] = element.color
                     }
 
-                guard let proxy = state.proxy else {
+                guard let proxy = state.content.proxy else {
                     return .none
                 }
 
@@ -142,16 +133,9 @@ public struct PianoRollEditor: View {
     }
 
     public var body: some View {
-        WithViewStore(store.stateless) { viewStore in
-            SolidScrollView([.horizontal, .vertical], showsIndicators: true) {
-                PitchDiagramContentView(
-                    store: store.scope(state: \.content, action: PianoRollEditorReducer.Action.content)
-                )
-            }
-            .onPreferenceChange(ContainedScrollViewKey.self) {
-                viewStore.send(.proxyChanged($0))
-            }
-        }
+        PitchDiagramContentView(
+            store: store.scope(state: \.content, action: PianoRollEditorReducer.Action.content)
+        )
     }
 }
 
