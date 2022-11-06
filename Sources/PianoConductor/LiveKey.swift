@@ -18,7 +18,7 @@ extension PianoConductor: DependencyKey {
         return Self(
             noteOn: { try? await actor.play(pitch: $0) },
             noteOff: { try? await actor.pause(pitch: $0) },
-            start: { try? await actor.start() }
+            start: { await actor.start() }
         )
     }
 
