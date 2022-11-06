@@ -35,13 +35,18 @@ fileprivate let evenSpacingSpacerRatio: [Letter: CGFloat] = [
 fileprivate let evenSpacingRelativeBlackKeyWidth: CGFloat = 7.0 / 12.0
 
 public struct Content: ReducerProtocol {
+    public enum KeyboardAlignment {
+        case left
+        case right
+    }
     public struct State: Equatable {
+        public var activatedPitches: [Pitch: Color]
         public var disabled: Bool
         public var offset: CGFloat
+        public var keyboardAlignment: KeyboardAlignment
         public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
-        public var activatedPitches: [Pitch: Color]
 
         public var spacerHeight: CGFloat {
             whiteKeyWidth * evenSpacingRelativeBlackKeyWidth
@@ -56,6 +61,7 @@ public struct Content: ReducerProtocol {
         public init(
             activatedPitches: [Pitch: Color] = [:],
             disabled: Bool = false,
+            keyboardAlignment: KeyboardAlignment = .left,
             offset: CGFloat = .zero,
             pianoRoll: PianoRollModel = .init(notes: [], length: 0, height: 0),
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
@@ -63,6 +69,7 @@ public struct Content: ReducerProtocol {
         ) {
             self.activatedPitches = activatedPitches
             self.disabled = disabled
+            self.keyboardAlignment = keyboardAlignment
             self.offset = offset
             self.whiteKeyWidth = whiteKeyWidth
             self.pitchRange = pitchRange
@@ -98,7 +105,6 @@ struct PitchDiagramContentView: View {
     struct ViewState: Equatable {
         struct Keyboard: Equatable {
             var disabled: Bool
-            var offset: CGFloat
             var whiteKeyWidth: CGFloat
             var pitchRange: ClosedRange<Pitch>
             var pianoRollHeight: CGFloat
@@ -132,7 +138,6 @@ struct PitchDiagramContentView: View {
                 self.disabled = state.disabled
                 self.whiteKeyWidth = state.whiteKeyWidth
                 self.pitchRange = state.pitchRange
-                self.offset = max(state.offset, 0)
                 self.pianoRollHeight = CGFloat(pitchRange.count) * state.spacerHeight
                 self.activatedPitches = state.activatedPitches
             }
@@ -168,15 +173,30 @@ struct PitchDiagramContentView: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            ScrollView([.vertical]) {
-                WithViewStore(store, observe: { $0.offset }) { viewStore in
-                    keyboard.offset(y: viewStore.state)
+        WithViewStore(store, observe: { $0.keyboardAlignment }) { viewStore in
+            HStack(alignment: .bottom, spacing: 0) {
+                switch viewStore.state {
+                case .right:
+                    pianoRoll
+                        .coordinateSpace(name: "scroll")
+                    ScrollView([.vertical]) {
+                        WithViewStore(store, observe: { $0.offset }) { viewStore in
+                            keyboard.offset(y: viewStore.state)
+                        }
+                    }
+                    .scrollDisabled(true)
+
+                case .left:
+                    ScrollView([.vertical]) {
+                        WithViewStore(store, observe: { $0.offset }) { viewStore in
+                            keyboard.offset(y: viewStore.state)
+                        }
+                    }
+                    .scrollDisabled(true)
+                    pianoRoll
+                        .coordinateSpace(name: "scroll")
                 }
             }
-            .scrollDisabled(true)
-            pianoRoll
-                .coordinateSpace(name: "scroll")
         }
     }
 
@@ -193,7 +213,6 @@ struct PitchDiagramContentView: View {
                 noteOff: { viewStore.send(.noteOff($0)) }
             )
             .equatable()
-            .offset(x: viewStore.offset)
             .zIndex(1)
         }
     }
