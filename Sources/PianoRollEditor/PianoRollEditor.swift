@@ -81,7 +81,7 @@ public struct PianoRollEditorReducer: ReducerProtocol {
 
                 // Find activated pitches
                 let lastActivatedPitches = state.content.activatedPitches
-                state.content.activatedPitches = state.content.pianoRollNotes
+                let activatedPitches = state.content.pianoRoll.notes
                     .filter {
                         let startTime = $0.start * 500
                         let endTime = ($0.start + $0.length) * 500
@@ -91,6 +91,10 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                         let pitch = Array(state.content.pitchRange)[element.pitch - 1]
                         dict[pitch] = element.color
                     }
+
+                if lastActivatedPitches != activatedPitches {
+                    state.content.activatedPitches = activatedPitches
+                }
 
                 guard let proxy = state.content.proxy else {
                     return .none
@@ -105,7 +109,7 @@ public struct PianoRollEditorReducer: ReducerProtocol {
                 )
 
                 return .fireAndForget { [
-                    activatedPitches = state.content.activatedPitches,
+                    activatedPitches,
                     lastActivatedPitches
                 ] in
                     let addedPitches = Set(activatedPitches.keys).subtracting(Set(lastActivatedPitches.keys))

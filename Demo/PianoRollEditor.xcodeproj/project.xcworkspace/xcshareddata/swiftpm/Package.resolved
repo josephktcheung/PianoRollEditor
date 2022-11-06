@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/AudioKit/PianoRoll",
       "state" : {
-        "revision" : "b88b93cda3df7381aa34df5b5c339f25df88251b",
-        "version" : "1.0.5"
+        "branch" : "main",
+        "revision" : "e3b370f3649373c595d9b4ba6246f91775730e80"
       }
     },
     {

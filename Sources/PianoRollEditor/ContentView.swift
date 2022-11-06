@@ -38,10 +38,6 @@ public struct Content: ReducerProtocol {
     public struct State: Equatable {
         public var disabled: Bool
         public var offset: CGFloat
-        public var pianoRollNotes: [PianoRollNote]
-        public var pianoRollLength: Int
-        public var pianoRollHeight: Int
-
         public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
@@ -61,9 +57,7 @@ public struct Content: ReducerProtocol {
             activatedPitches: [Pitch: Color] = [:],
             disabled: Bool = false,
             offset: CGFloat = .zero,
-            pianoRollNotes: [PianoRollNote] = [],
-            pianoRollLength: Int = 0,
-            pianoRollHeight: Int = 0,
+            pianoRoll: PianoRollModel = .init(notes: [], length: 0, height: 0),
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
             whiteKeyWidth: CGFloat = 60
         ) {
@@ -71,11 +65,8 @@ public struct Content: ReducerProtocol {
             self.disabled = disabled
             self.offset = offset
             self.whiteKeyWidth = whiteKeyWidth
-            self.pianoRollNotes = pianoRollNotes
-            self.pianoRollHeight = pianoRollHeight
-            self.pianoRollLength = pianoRollLength
             self.pitchRange = pitchRange
-            self.pianoRoll = .init(notes: pianoRollNotes, length: pianoRollLength, height: pianoRollHeight)
+            self.pianoRoll = pianoRoll
         }
     }
 
@@ -164,7 +155,7 @@ struct PitchDiagramContentView: View {
             var offset: CGFloat
 
             init(state: Content.State) {
-                self.height = CGFloat(state.pianoRollHeight) * state.spacerHeight
+                self.height = CGFloat(state.pianoRoll.height) * state.spacerHeight
                 self.offset = state.offset + state.spacerHeight * 2 * 5
             }
         }
