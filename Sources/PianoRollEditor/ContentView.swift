@@ -149,7 +149,7 @@ struct PitchDiagramContentView: View {
             var gridSize: CGSize
 
             init(state: Content.State) {
-                self.editable = state.disabled
+                self.editable = !state.disabled
                 self.model = state.pianoRoll
                 self.gridSize = .init(width: state.spacerHeight * 2, height: state.spacerHeight)
             }
