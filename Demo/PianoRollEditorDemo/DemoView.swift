@@ -18,10 +18,10 @@ struct Demo: ReducerProtocol {
             content: .init(
                 pianoRoll: .init(
                     notes: [
-                        .init(color: .red, start: 5, length: 2, pitch: 5, text: "E2"),
-                        .init(color: .cyan, start: 7, length: 1, pitch: 8, text: "G2"),
-                        .init(color: .green, start: 8, length: 4, pitch: 12, text: "B2"),
-                        .init(color: .cyan, start: 12, length: 3, pitch: 16, text: "D#3"),
+                        .init(start: 5, length: 2, pitch: 5, text: "E2", color: .red),
+                        .init(start: 7, length: 1, pitch: 8, text: "G2", color: .cyan),
+                        .init(start: 8, length: 4, pitch: 12, text: "B2", color: .green),
+                        .init(start: 12, length: 3, pitch: 16, text: "D#3", color: .cyan),
                     ],
                     length: 100,
                     height: pitchRange.count
