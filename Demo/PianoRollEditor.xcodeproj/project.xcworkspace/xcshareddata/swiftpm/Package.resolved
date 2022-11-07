@@ -33,7 +33,7 @@
       "location" : "https://github.com/AudioKit/PianoRoll",
       "state" : {
         "branch" : "main",
-        "revision" : "e3b370f3649373c595d9b4ba6246f91775730e80"
+        "revision" : "49e5b619ffbd581431b5baa99054fa1a6982c404"
       }
     },
     {
@@ -104,8 +104,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/AudioKit/Tonic.git",
       "state" : {
-        "revision" : "d9280b44489bb753c4a2ac7206142547f2a986cc",
-        "version" : "1.0.7"
+        "revision" : "840494a13a641371c832071df5cc58fa627084c3",
+        "version" : "1.0.9"
       }
     },
     {
