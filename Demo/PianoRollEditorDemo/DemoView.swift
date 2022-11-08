@@ -26,7 +26,8 @@ struct Demo: ReducerProtocol {
                     length: 100,
                     height: pitchRange.count
                 ),
-                pitchRange: pitchRange
+                pitchRange: pitchRange,
+                pitchSequence: [Int](0..<5000).map { i in .init(pitch: Float.random(in: 0..<300), time: .now.addingTimeInterval(TimeInterval(i))) }
             )
         )
     }
@@ -66,7 +67,6 @@ struct DemoView: View {
                 store: store.scope(state: \.editor, action: Demo.Action.editor)
             )
             .background(Color(white: 0.3))
-
         }
     }
 }

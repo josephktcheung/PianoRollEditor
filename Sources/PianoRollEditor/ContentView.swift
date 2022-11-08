@@ -5,6 +5,7 @@
 //  Created by Joseph Cheung on 29/10/2022.
 //
 
+import Charts
 import ComposableArchitecture
 import Keyboard
 import PianoRoll
@@ -39,14 +40,33 @@ public struct Content: ReducerProtocol {
         case left
         case right
     }
+
+    public struct PitchSequence: Equatable, Identifiable {
+        public var id: Double { time.timeIntervalSince1970 }
+
+        public var pitch: Float
+        public var time: Date
+
+        public init(pitch: Float, time: Date) {
+            self.pitch = pitch
+            self.time = time
+        }
+    }
+
     public struct State: Equatable {
         public var activatedPitches: [Pitch: Color]
         public var disabled: Bool
-        public var offset: CGFloat
+        public var offset: CGPoint {
+            guard let contentOffset = proxy?.contentOffset else {
+                return .zero
+            }
+            return .init(x: -contentOffset.x, y: -contentOffset.y)
+        }
         public var keyboardAlignment: KeyboardAlignment
         public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
+        public var pitchSequence: [PitchSequence]
 
         public var spacerHeight: CGFloat {
             whiteKeyWidth * evenSpacingRelativeBlackKeyWidth
@@ -56,23 +76,32 @@ public struct Content: ReducerProtocol {
             .init(width: spacerHeight * 2, height: spacerHeight)
         }
 
+        public var pianoRollHeight: CGFloat {
+            CGFloat(pitchRange.count) * gridSize.height
+        }
+
+        public var pianoRollWidth: CGFloat {
+            CGFloat(pianoRoll.length) * gridSize.width
+        }
+
         public var proxy: SolidScrollViewProxy? = nil
 
         public init(
             activatedPitches: [Pitch: Color] = [:],
             disabled: Bool = false,
             keyboardAlignment: KeyboardAlignment = .left,
-            offset: CGFloat = .zero,
+            offset: CGPoint = .zero,
             pianoRoll: PianoRollModel = .init(notes: [], length: 0, height: 0),
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
+            pitchSequence: [PitchSequence] = [],
             whiteKeyWidth: CGFloat = 60
         ) {
             self.activatedPitches = activatedPitches
             self.disabled = disabled
             self.keyboardAlignment = keyboardAlignment
-            self.offset = offset
             self.whiteKeyWidth = whiteKeyWidth
             self.pitchRange = pitchRange
+            self.pitchSequence = pitchSequence
             self.pianoRoll = pianoRoll
         }
     }
@@ -82,7 +111,6 @@ public struct Content: ReducerProtocol {
         case noteOff(Pitch)
         case pianoRollChanged(PianoRollModel)
         case proxyChanged(SolidScrollViewProxy?)
-        case offsetChanged(CGFloat)
     }
 
     public func reduce(into state: inout State, action: Action) -> EffectTask<Action> {
@@ -91,11 +119,11 @@ public struct Content: ReducerProtocol {
             state.proxy = proxy
             return .none
 
-        case let .offsetChanged(offset):
-            state.offset = offset
+        case let .pianoRollChanged(model):
+            state.pianoRoll = model
             return .none
 
-        case .noteOn, .noteOff, .pianoRollChanged:
+        case .noteOn, .noteOff:
             return .none
         }
     }
@@ -138,7 +166,7 @@ struct PitchDiagramContentView: View {
                 self.disabled = state.disabled
                 self.whiteKeyWidth = state.whiteKeyWidth
                 self.pitchRange = state.pitchRange
-                self.pianoRollHeight = CGFloat(pitchRange.count) * state.spacerHeight
+                self.pianoRollHeight = state.pianoRollHeight
                 self.activatedPitches = state.activatedPitches
             }
         }
@@ -161,7 +189,22 @@ struct PitchDiagramContentView: View {
 
             init(state: Content.State) {
                 self.height = CGFloat(state.pianoRoll.height) * state.spacerHeight
-                self.offset = state.offset + state.spacerHeight * 2 * 5
+                self.offset = state.offset.y + state.spacerHeight * 2 * 5
+            }
+        }
+
+        struct PitchLine: Equatable {
+            var height: CGFloat
+            var width: CGFloat
+            var offset: CGPoint
+            var pitches: [Content.PitchSequence]
+
+            init(state: Content.State) {
+                self.height = state.pianoRollHeight
+                self.width = state.pianoRollWidth
+                let maxContentOffset: CGPoint = state.proxy?.maxContentOffset ?? .zero
+                self.offset = .init(x: state.offset.x + maxContentOffset.x / 2, y: state.offset.y + maxContentOffset.y / 2)
+                self.pitches = state.pitchSequence
             }
         }
     }
@@ -181,7 +224,7 @@ struct PitchDiagramContentView: View {
                         .coordinateSpace(name: "scroll")
                     ScrollView([.vertical]) {
                         WithViewStore(store, observe: { $0.offset }) { viewStore in
-                            keyboard.offset(y: viewStore.state)
+                            keyboard.offset(y: viewStore.state.y)
                         }
                     }
                     .scrollDisabled(true)
@@ -189,7 +232,7 @@ struct PitchDiagramContentView: View {
                 case .left:
                     ScrollView([.vertical]) {
                         WithViewStore(store, observe: { $0.offset }) { viewStore in
-                            keyboard.offset(y: viewStore.state)
+                            keyboard.offset(y: viewStore.state.y)
                         }
                     }
                     .scrollDisabled(true)
@@ -218,28 +261,55 @@ struct PitchDiagramContentView: View {
     }
 
     @ViewBuilder private var pianoRoll: some View {
-        WithViewStore(store.stateless) { viewStore in
-            SolidScrollView([.horizontal, .vertical]) {
-                WithViewStore(store, observe: ViewState.PianoRoll.init) { viewStore in
-                    PianoRoll(
-                        editable: viewStore.editable,
-                        model: viewStore.binding(get: \.model, send: Content.Action.pianoRollChanged),
-                        gridColor: .white.opacity(0.3),
-                        gridSize: viewStore.gridSize
-                    )
-                    .background(GeometryReader { geo in
-                        Color.clear
-                            .preference(key: ViewOffsetKey.self, value: geo.frame(in: .named("scroll")).origin)
-                    })
-                    .onPreferenceChange(ViewOffsetKey.self) {
-                        viewStore.send(.offsetChanged($0.y))
+        ZStack {
+            WithViewStore(store.stateless) { viewStore in
+                SolidScrollView([.horizontal, .vertical]) {
+                    WithViewStore(store, observe: ViewState.PianoRoll.init) { viewStore in
+                        PianoRoll(
+                            editable: viewStore.editable,
+                            model: viewStore.binding(get: \.model, send: Content.Action.pianoRollChanged),
+                            gridColor: .white.opacity(0.3),
+                            gridSize: viewStore.gridSize
+                        )
                     }
                 }
+                .onPreferenceChange(ContainedScrollViewKey.self) {
+                    viewStore.send(.proxyChanged($0))
+                }
             }
-            .onPreferenceChange(ContainedScrollViewKey.self) {
-                viewStore.send(.proxyChanged($0))
-            }
+            pitchLine
         }
+    }
+
+
+    @ViewBuilder private var pitchLine: some View {
+        WithViewStore(store, observe: ViewState.PitchLine.init) { viewStore in
+            ScrollView([.horizontal, .vertical]) {
+                PitchLineChart(pitches: viewStore.pitches)
+                    .allowsHitTesting(false)
+                    .frame(width: viewStore.width, height: viewStore.height)
+                    .offset(x: viewStore.offset.x, y: viewStore.offset.y)
+            }
+            .scrollDisabled(true)
+            .allowsHitTesting(false)
+        }
+    }
+}
+
+struct PitchLineChart: View, Equatable {
+    var pitches: [Content.PitchSequence]
+
+    var body: some View {
+        Chart(pitches) {
+            LineMark(
+                x: .value("Time", $0.time),
+                y: .value("Pitch", $0.pitch)
+            )
+            .opacity(0.5)
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .foregroundStyle(.white)
     }
 }
 
