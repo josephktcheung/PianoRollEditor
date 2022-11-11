@@ -113,8 +113,8 @@ public struct Content: ReducerProtocol {
                 let d = 69 + 12 * log2f($0.pitch / 440)
                 let lowerBound = pitchRange.lowerBound.midiNoteNumber
                 let y = pianoRollHeight -
-                max(
-                    min(
+                min(
+                    max(
                         ((CGFloat(d) - CGFloat(lowerBound)) * spacerHeight + spacerHeight / 2),
                         0
                     ),
