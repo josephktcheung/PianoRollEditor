@@ -112,7 +112,14 @@ public struct Content: ReducerProtocol {
             points = pitchSequence.map {
                 let d = 69 + 12 * log2f($0.pitch / 440)
                 let lowerBound = pitchRange.lowerBound.midiNoteNumber
-                let y = pianoRollHeight - ((CGFloat(d) - CGFloat(lowerBound)) * spacerHeight + spacerHeight / 2)
+                let y = pianoRollHeight -
+                max(
+                    min(
+                        ((CGFloat(d) - CGFloat(lowerBound)) * spacerHeight + spacerHeight / 2),
+                        0
+                    ),
+                    pianoRollHeight
+                )
 
                 let x = CGFloat($0.seconds) * 2 * spacerHeight * 2
 
