@@ -42,14 +42,14 @@ public struct Content: ReducerProtocol {
     }
 
     public struct PitchSequence: Equatable, Identifiable {
-        public var id: Double { time.timeIntervalSince1970 }
+        public var id: Float { seconds }
 
         public var pitch: Float
-        public var time: Date
+        public var seconds: Float
 
-        public init(pitch: Float, time: Date) {
+        public init(pitch: Float, seconds: Float) {
             self.pitch = pitch
-            self.time = time
+            self.seconds = seconds
         }
     }
 
@@ -66,7 +66,9 @@ public struct Content: ReducerProtocol {
         public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
-        public var pitchSequence: [PitchSequence]
+        public var pitchSequence: [PitchSequence] { didSet { updatePoints() } }
+
+        public var points: [CGPoint] = []
 
         public var spacerHeight: CGFloat {
             whiteKeyWidth * evenSpacingRelativeBlackKeyWidth
@@ -103,6 +105,19 @@ public struct Content: ReducerProtocol {
             self.pitchRange = pitchRange
             self.pitchSequence = pitchSequence
             self.pianoRoll = pianoRoll
+            self.updatePoints()
+        }
+
+        private mutating func updatePoints() {
+            points = pitchSequence.map {
+                let d = 69 + 12 * log2f($0.pitch / 440)
+                let lowerBound = pitchRange.lowerBound.midiNoteNumber
+                let y = pianoRollHeight - ((CGFloat(d) - CGFloat(lowerBound)) * spacerHeight + spacerHeight / 2)
+
+                let x = CGFloat($0.seconds) * 2 * spacerHeight * 2
+
+                return CGPoint(x: x, y: y)
+            }
         }
     }
 
@@ -197,14 +212,14 @@ struct PitchDiagramContentView: View {
             var height: CGFloat
             var width: CGFloat
             var offset: CGPoint
-            var pitches: [Content.PitchSequence]
+            var points: [CGPoint]
 
             init(state: Content.State) {
                 self.height = state.pianoRollHeight
                 self.width = state.pianoRollWidth
                 let maxContentOffset: CGPoint = state.proxy?.maxContentOffset ?? .zero
                 self.offset = .init(x: state.offset.x + maxContentOffset.x / 2, y: state.offset.y + maxContentOffset.y / 2)
-                self.pitches = state.pitchSequence
+                self.points = state.points
             }
         }
     }
@@ -285,7 +300,18 @@ struct PitchDiagramContentView: View {
     @ViewBuilder private var pitchLine: some View {
         WithViewStore(store, observe: ViewState.PitchLine.init) { viewStore in
             ScrollView([.horizontal, .vertical]) {
-                PitchLineChart(pitches: viewStore.pitches)
+                Canvas { context, size in
+                    let p = Path { path in
+                        for (idx, i) in viewStore.points.enumerated() {
+                            if idx == 0 {
+                                path.move(to: i)
+                            } else {
+                                path.addLine(to: i)
+                            }
+                        }
+                    }
+                    context.stroke(p, with: .color(.white.opacity(0.5)), style: .init(lineWidth: 2))
+                }
                     .allowsHitTesting(false)
                     .frame(width: viewStore.width, height: viewStore.height)
                     .offset(x: viewStore.offset.x, y: viewStore.offset.y)
@@ -293,23 +319,6 @@ struct PitchDiagramContentView: View {
             .scrollDisabled(true)
             .allowsHitTesting(false)
         }
-    }
-}
-
-struct PitchLineChart: View, Equatable {
-    var pitches: [Content.PitchSequence]
-
-    var body: some View {
-        Chart(pitches) {
-            LineMark(
-                x: .value("Time", $0.time),
-                y: .value("Pitch", $0.pitch)
-            )
-            .opacity(0.5)
-        }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .foregroundStyle(.white)
     }
 }
 

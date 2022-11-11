@@ -27,7 +27,15 @@ struct Demo: ReducerProtocol {
                     height: pitchRange.count
                 ),
                 pitchRange: pitchRange,
-                pitchSequence: [Int](0..<5000).map { i in .init(pitch: Float.random(in: 0..<300), time: .now.addingTimeInterval(TimeInterval(i))) }
+                pitchSequence: [
+                    .init(pitch: 82.4, seconds: 2.5),
+                    .init(pitch: 82.6, seconds: 2.6),
+                    .init(pitch: 82.7, seconds: 2.8),
+                    .init(pitch: 82.3, seconds: 3.0),
+                    .init(pitch: 82.5, seconds: 3.2),
+                    .init(pitch: 82.6, seconds: 3.4),
+                    .init(pitch: 83.0, seconds: 3.5),
+                ]
             )
         )
     }
