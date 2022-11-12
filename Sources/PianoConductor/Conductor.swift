@@ -12,4 +12,5 @@ public struct PianoConductor {
     public var noteOn: @Sendable (Pitch) async -> Void
     public var noteOff: @Sendable (Pitch) async -> Void
     public var start: @Sendable () async -> Void
+    public var stop: @Sendable () async -> Void
 }

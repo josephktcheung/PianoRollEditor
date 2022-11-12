@@ -16,6 +16,7 @@ struct Demo: ReducerProtocol {
     struct State: Equatable {
         var editor: PianoRollEditorReducer.State = .init(
             content: .init(
+                keyboardAlignment: .right,
                 pianoRoll: .init(
                     notes: [
                         .init(start: 5, length: 2, pitch: 5, text: "E2", color: .red),
@@ -42,11 +43,42 @@ struct Demo: ReducerProtocol {
 
     enum Action: Equatable {
         case editor(PianoRollEditorReducer.Action)
+        case viewDidAppear
+        case viewDidDisappear
     }
+
+    @Dependency(\.pianoConductor) var conductor
 
     public var body: some ReducerProtocol<State, Action> {
         Scope(state: \.editor, action: /Action.editor) {
             PianoRollEditorReducer()
+        }
+
+        Reduce { state, action in
+            switch action {
+            case let .editor(.content(.noteOn(pitch, _))):
+                return .fireAndForget {
+                    await conductor.noteOn(pitch)
+                }
+
+            case let .editor(.content(.noteOff(pitch))):
+                return .fireAndForget {
+                    await conductor.noteOff(pitch)
+                }
+
+            case .editor:
+                return .none
+
+            case .viewDidAppear:
+                return .fireAndForget {
+                    await conductor.start()
+                }
+
+            case .viewDidDisappear:
+                return .fireAndForget {
+                    await conductor.stop()
+                }
+            }
         }
     }
 }
@@ -60,21 +92,18 @@ struct DemoView: View {
 
     var body: some View {
         VStack {
-            WithViewStore(store, observe: { $0.editor.milliSecondsLapsed }) { viewStore in
-                HStack {
-                    Button("Play") {
-                        viewStore.send(.editor(.play))
-                    }
-                    Text("Seconds: \(viewStore.state / 1000)")
-                    Button("Stop") {
-                        viewStore.send(.editor(.stop))
-                    }
+            WithViewStore(store.stateless) { viewStore in
+                PianoRollEditor(
+                    store: store.scope(state: \.editor, action: Demo.Action.editor)
+                )
+                .background(Color(white: 0.3))
+                .onAppear {
+                    viewStore.send(.viewDidAppear)
+                }
+                .onDisappear {
+                    viewStore.send(.viewDidDisappear)
                 }
             }
-            PianoRollEditor(
-                store: store.scope(state: \.editor, action: Demo.Action.editor)
-            )
-            .background(Color(white: 0.3))
         }
     }
 }

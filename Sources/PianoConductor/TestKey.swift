@@ -19,7 +19,8 @@ extension PianoConductor: TestDependencyKey {
     public static var testValue = Self(
         noteOn: XCTUnimplemented("\(Self.self).noteOn"),
         noteOff: XCTUnimplemented("\(Self.self).noteOff"),
-        start: XCTUnimplemented("\(Self.self).start")
+        start: XCTUnimplemented("\(Self.self).start"),
+        stop: XCTUnimplemented("\(Self.self).stop")
     )
 }
 
@@ -27,6 +28,7 @@ extension PianoConductor {
     public static let noop = Self(
         noteOn: { _ in },
         noteOff: { _ in },
-        start: {}
+        start: {},
+        stop: {}
     )
 }

@@ -18,112 +18,33 @@ public struct PianoRollEditorReducer: ReducerProtocol {
         public var content: Content.State
         public var isTimerActive = false
         public var milliSecondsLapsed = 0
-
+        
         public init(
             content: Content.State = .init()
         ) {
             self.content = content
         }
     }
-
+    
     public enum Action: Equatable {
         case content(Content.Action)
-        case play
-        case stop
-        case onDisappear
-        case timerTicked
     }
-
+    
     public init() {}
-
+    
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.pianoConductor) var conductor
     
     private enum TimerID {}
-
+    
     public var body: some ReducerProtocol<State, Action> {
         Scope(state: \.content, action: /Action.content) {
             Content()
         }
-
+        
         Reduce { state, action in
             switch action {
-            case let .content(.noteOn(pitch, _)):
-                return .fireAndForget {
-                    await conductor.noteOn(pitch)
-                }
-
-            case let .content(.noteOff(pitch)):
-                return .fireAndForget {
-                    await conductor.noteOff(pitch)
-                }
-
             case .content:
                 return .none
-
-            case .play:
-                state.isTimerActive = true
-                return .run { [isTimerActive = state.isTimerActive] send in
-                    await conductor.start()
-                    guard isTimerActive else { return }
-                    for await _ in self.clock.timer(interval: .milliseconds(50)) {
-                      await send(.timerTicked)
-                    }
-                }
-                .cancellable(id: TimerID.self, cancelInFlight: true)
-
-            case .stop:
-                state.milliSecondsLapsed = 0
-                return .cancel(id: TimerID.self)
-
-            case .timerTicked:
-                state.milliSecondsLapsed += 50
-
-                // Find activated pitches
-                let lastActivatedPitches = state.content.activatedPitches
-                let activatedPitches = state.content.pianoRoll.notes
-                    .filter {
-                        let startTime = $0.start * 500
-                        let endTime = ($0.start + $0.length) * 500
-                        return (startTime...endTime).contains(Double(state.milliSecondsLapsed))
-                    }
-                    .reduce(into: [Pitch: Color]()) { dict, element in
-                        let pitch = Array(state.content.pitchRange)[element.pitch - 1]
-                        dict[pitch] = element.color
-                    }
-
-                if lastActivatedPitches != activatedPitches {
-                    state.content.activatedPitches = activatedPitches
-                }
-
-                guard let proxy = state.content.proxy else {
-                    return .none
-                }
-
-                proxy.setContentOffset(
-                    .init(
-                        x: proxy.contentOffset.x + state.content.gridSize.width / 10,
-                        y: proxy.contentOffset.y
-                    ),
-                    animated: false
-                )
-
-                return .fireAndForget { [
-                    activatedPitches,
-                    lastActivatedPitches
-                ] in
-                    let addedPitches = Set(activatedPitches.keys).subtracting(Set(lastActivatedPitches.keys))
-                    for pitch in addedPitches {
-                        await conductor.noteOn(pitch)
-                    }
-                    let removedPitches = Set(lastActivatedPitches.keys).subtracting(Set(activatedPitches.keys))
-                    for pitch in removedPitches {
-                        await conductor.noteOff(pitch)
-                    }
-                }
-
-            case .onDisappear:
-              return .cancel(id: TimerID.self)
             }
         }
     }

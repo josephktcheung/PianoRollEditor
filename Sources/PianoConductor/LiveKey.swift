@@ -18,7 +18,8 @@ extension PianoConductor: DependencyKey {
         return Self(
             noteOn: { try? await actor.play(pitch: $0) },
             noteOff: { try? await actor.pause(pitch: $0) },
-            start: { await actor.start() }
+            start: { await actor.start() },
+            stop: { await actor.stop() }
         )
     }
 
@@ -59,6 +60,10 @@ extension PianoConductor: DependencyKey {
             } catch {
                 Log("Could not start engine")
             }
+        }
+
+        func stop() {
+            audioEngine.stop()
         }
     }
 }
