@@ -229,6 +229,23 @@ struct PitchDiagramContentView: View {
                 self.points = state.points
             }
         }
+
+        struct KeyboardScrollView: Equatable {
+            var offset: CGPoint
+
+            init(state: Content.State) {
+                if let offset = state.proxy?.contentOffset, let maxOffset = state.proxy?.maxContentOffset {
+                    switch state.keyboardAlignment {
+                    case .right:
+                        self.offset = .init(x: -max(offset.x - maxOffset.x, 0), y: -offset.y)
+                    case .left:
+                        self.offset = .init(x: -min(offset.x, 0), y: -offset.y)
+                    }
+                } else {
+                    self.offset = .zero
+                }
+            }
+        }
     }
 
     private let store: StoreOf<Content>
@@ -244,20 +261,22 @@ struct PitchDiagramContentView: View {
                 case .right:
                     pianoRoll
                         .coordinateSpace(name: "scroll")
-                    ScrollView([.vertical]) {
-                        WithViewStore(store, observe: { $0.offset }) { viewStore in
-                            keyboard.offset(y: viewStore.state.y)
+                    WithViewStore(store, observe: ViewState.KeyboardScrollView.init) { viewStore in
+                        ScrollView([.vertical]) {
+                            keyboard.offset(y: viewStore.offset.y)
                         }
+                        .offset(x: viewStore.offset.x)
+                        .scrollDisabled(true)
                     }
-                    .scrollDisabled(true)
 
                 case .left:
-                    ScrollView([.vertical]) {
-                        WithViewStore(store, observe: { $0.offset }) { viewStore in
-                            keyboard.offset(y: viewStore.state.y)
+                    WithViewStore(store, observe: ViewState.KeyboardScrollView.init) { viewStore in
+                        ScrollView([.vertical]) {
+                            keyboard.offset(y: viewStore.offset.y)
                         }
+                        .offset(x: viewStore.offset.x)
+                        .scrollDisabled(true)
                     }
-                    .scrollDisabled(true)
                     pianoRoll
                         .coordinateSpace(name: "scroll")
                 }
