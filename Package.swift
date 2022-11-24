@@ -9,7 +9,6 @@ let package = Package(
         .iOS(.v16)
     ],
     products: [
-        .library(name: "PianoConductor", targets: ["PianoConductor"]),
         .library(name: "PianoRollEditor", targets: ["PianoRollEditor"]),
     ],
     dependencies: [
@@ -22,21 +21,9 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "PianoConductor",
-            dependencies: [
-                "AudioKit",
-                "Tonic",
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
-            ],
-            resources: [
-                .process("Resources/FluidR3_GM.sf2")
-            ]
-        ),
-        .target(
             name: "PianoRollEditor",
             dependencies: [
                 "Keyboard",
-                "PianoConductor",
                 "PianoRoll",
                 "SolidScroll",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),

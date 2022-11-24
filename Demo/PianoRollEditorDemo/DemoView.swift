@@ -47,38 +47,9 @@ struct Demo: ReducerProtocol {
         case viewDidDisappear
     }
 
-    @Dependency(\.pianoConductor) var conductor
-
     public var body: some ReducerProtocol<State, Action> {
         Scope(state: \.editor, action: /Action.editor) {
             PianoRollEditorReducer()
-        }
-
-        Reduce { state, action in
-            switch action {
-            case let .editor(.content(.noteOn(pitch, _))):
-                return .fireAndForget {
-                    await conductor.noteOn(pitch)
-                }
-
-            case let .editor(.content(.noteOff(pitch))):
-                return .fireAndForget {
-                    await conductor.noteOff(pitch)
-                }
-
-            case .editor:
-                return .none
-
-            case .viewDidAppear:
-                return .fireAndForget {
-                    await conductor.start()
-                }
-
-            case .viewDidDisappear:
-                return .fireAndForget {
-                    await conductor.stop()
-                }
-            }
         }
     }
 }
