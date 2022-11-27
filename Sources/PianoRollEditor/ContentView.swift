@@ -246,6 +246,16 @@ struct PitchDiagramContentView: View {
                 }
             }
         }
+
+        struct Container: Equatable {
+            var height: CGFloat
+            var alignment: Content.KeyboardAlignment
+
+            init(state: Content.State) {
+                self.height = state.pianoRollHeight
+                self.alignment = state.keyboardAlignment
+            }
+        }
     }
 
     private let store: StoreOf<Content>
@@ -255,9 +265,9 @@ struct PitchDiagramContentView: View {
     }
 
     var body: some View {
-        WithViewStore(store, observe: { $0.keyboardAlignment }) { viewStore in
+        WithViewStore(store, observe: ViewState.Container.init) { viewStore in
             HStack(alignment: .bottom, spacing: 0) {
-                switch viewStore.state {
+                switch viewStore.alignment {
                 case .right:
                     pianoRoll
                         .coordinateSpace(name: "scroll")
@@ -281,6 +291,7 @@ struct PitchDiagramContentView: View {
                         .coordinateSpace(name: "scroll")
                 }
             }
+            .frame(height: viewStore.height)
         }
     }
 
