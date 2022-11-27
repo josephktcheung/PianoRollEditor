@@ -27,16 +27,7 @@ struct Demo: ReducerProtocol {
                     length: 100,
                     height: pitchRange.count
                 ),
-                pitchRange: pitchRange,
-                pitchSequence: [
-                    .init(pitch: 82.4, seconds: 2.5),
-                    .init(pitch: 82.6, seconds: 2.6),
-                    .init(pitch: 82.7, seconds: 2.8),
-                    .init(pitch: 82.3, seconds: 3.0),
-                    .init(pitch: 82.5, seconds: 3.2),
-                    .init(pitch: 82.6, seconds: 3.4),
-                    .init(pitch: 83.0, seconds: 3.5),
-                ]
+                pitchRange: pitchRange
             )
         )
     }

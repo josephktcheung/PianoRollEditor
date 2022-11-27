@@ -66,7 +66,6 @@ public struct Content: ReducerProtocol {
         public var pianoRoll: PianoRollModel
         public var pitchRange: ClosedRange<Pitch>
         public var whiteKeyWidth: CGFloat
-        public var pitchSequence: [PitchSequence] { didSet { updatePoints() } }
 
         public var points: [CGPoint] = []
 
@@ -95,7 +94,6 @@ public struct Content: ReducerProtocol {
             offset: CGPoint = .zero,
             pianoRoll: PianoRollModel = .init(notes: [], length: 0, height: 0),
             pitchRange: ClosedRange<Pitch> = Pitch(0)...Pitch(10),
-            pitchSequence: [PitchSequence] = [],
             whiteKeyWidth: CGFloat = 60
         ) {
             self.activatedPitches = activatedPitches
@@ -103,28 +101,7 @@ public struct Content: ReducerProtocol {
             self.keyboardAlignment = keyboardAlignment
             self.whiteKeyWidth = whiteKeyWidth
             self.pitchRange = pitchRange
-            self.pitchSequence = pitchSequence
             self.pianoRoll = pianoRoll
-            self.updatePoints()
-        }
-
-        private mutating func updatePoints() {
-            points = pitchSequence.map {
-                let d = 69 + 12 * log2f($0.pitch / 440)
-                let lowerBound = pitchRange.lowerBound.midiNoteNumber
-                let y = pianoRollHeight -
-                min(
-                    max(
-                        ((CGFloat(d) - CGFloat(lowerBound)) * spacerHeight + spacerHeight / 2),
-                        0
-                    ),
-                    pianoRollHeight
-                )
-
-                let x = CGFloat($0.seconds) * 2 * spacerHeight * 2
-
-                return CGPoint(x: x, y: y)
-            }
         }
     }
 
@@ -202,31 +179,6 @@ struct PitchDiagramContentView: View {
                 self.editable = !state.disabled
                 self.model = state.pianoRoll
                 self.gridSize = .init(width: state.spacerHeight * 2, height: state.spacerHeight)
-            }
-        }
-
-        struct Line: Equatable {
-            var height: CGFloat
-            var offset: CGFloat
-
-            init(state: Content.State) {
-                self.height = CGFloat(state.pianoRoll.height) * state.spacerHeight
-                self.offset = state.offset.y + state.spacerHeight * 2 * 5
-            }
-        }
-
-        struct PitchLine: Equatable {
-            var height: CGFloat
-            var width: CGFloat
-            var offset: CGPoint
-            var points: [CGPoint]
-
-            init(state: Content.State) {
-                self.height = state.pianoRollHeight
-                self.width = state.pianoRollWidth
-                let maxContentOffset: CGPoint = state.proxy?.maxContentOffset ?? .zero
-                self.offset = .init(x: state.offset.x + maxContentOffset.x / 2, y: state.offset.y + maxContentOffset.y / 2)
-                self.points = state.points
             }
         }
 
@@ -329,32 +281,6 @@ struct PitchDiagramContentView: View {
                     viewStore.send(.proxyChanged($0))
                 }
             }
-            pitchLine
-        }
-    }
-
-
-    @ViewBuilder private var pitchLine: some View {
-        WithViewStore(store, observe: ViewState.PitchLine.init) { viewStore in
-            ScrollView([.horizontal, .vertical]) {
-                Canvas { context, size in
-                    let p = Path { path in
-                        for (idx, i) in viewStore.points.enumerated() {
-                            if idx == 0 {
-                                path.move(to: i)
-                            } else {
-                                path.addLine(to: i)
-                            }
-                        }
-                    }
-                    context.stroke(p, with: .color(.white.opacity(0.5)), style: .init(lineWidth: 2))
-                }
-                    .allowsHitTesting(false)
-                    .frame(width: viewStore.width, height: viewStore.height)
-                    .offset(x: viewStore.offset.x, y: viewStore.offset.y)
-            }
-            .scrollDisabled(true)
-            .allowsHitTesting(false)
         }
     }
 }
